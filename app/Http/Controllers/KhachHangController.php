@@ -7,59 +7,89 @@ use Illuminate\Http\Request;
 
 class KhachHangController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
+    // Danh sách + tìm kiếm + phân trang
+    public function index(Request $request)
     {
-        //
+        $tuKhoa = $request->input('q');
+
+        $dsKhachHang = KhachHang::query()
+            ->when($tuKhoa, function ($query, $tuKhoa) {
+                $query->where(function ($q) use ($tuKhoa) {
+                    $q->where('ten', 'like', "%{$tuKhoa}%")
+                      ->orWhere('email', 'like', "%{$tuKhoa}%")
+                      ->orWhere('so_dien_thoai', 'like', "%{$tuKhoa}%");
+                });
+            })
+            ->latest()
+            ->paginate(10)
+            ->withQueryString();
+
+        return view('khach-hang.index', compact('dsKhachHang', 'tuKhoa'));
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
+    // Hiện form thêm mới
     public function create()
     {
-        //
+        return view('khach-hang.create', ['khachHang' => new KhachHang()]);
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
+    // Lưu khách hàng mới
     public function store(Request $request)
     {
-        //
+        $duLieu = $this->kiemTraDuLieu($request);
+
+        KhachHang::create($duLieu);
+
+        return redirect()->route('khach-hang.index')
+            ->with('thanh_cong', 'Đã thêm khách hàng mới.');
     }
 
-    /**
-     * Display the specified resource.
-     */
+    // Xem chi tiết
     public function show(KhachHang $khachHang)
     {
-        //
+        return view('khach-hang.show', compact('khachHang'));
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
+    // Hiện form sửa
     public function edit(KhachHang $khachHang)
     {
-        //
+        return view('khach-hang.edit', compact('khachHang'));
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
+    // Cập nhật
     public function update(Request $request, KhachHang $khachHang)
     {
-        //
+        $duLieu = $this->kiemTraDuLieu($request);
+
+        $khachHang->update($duLieu);
+
+        return redirect()->route('khach-hang.index')
+            ->with('thanh_cong', 'Đã cập nhật khách hàng.');
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
+    // Xóa
     public function destroy(KhachHang $khachHang)
     {
-        //
+        $khachHang->delete();
+
+        return redirect()->route('khach-hang.index')
+            ->with('thanh_cong', 'Đã xóa khách hàng.');
+    }
+
+    // Kiểm tra dữ liệu form (dùng chung cho thêm và sửa)
+    private function kiemTraDuLieu(Request $request): array
+    {
+        return $request->validate([
+            'ten'           => ['required', 'string', 'max:255'],
+            'email'         => ['nullable', 'email', 'max:255'],
+            'so_dien_thoai' => ['nullable', 'string', 'max:20'],
+            'dia_chi'       => ['nullable', 'string', 'max:500'],
+            'ghi_chu'       => ['nullable', 'string'],
+        ], [
+            'ten.required'  => 'Vui lòng nhập tên khách hàng.',
+            'ten.max'       => 'Tên không được quá 255 ký tự.',
+            'email.email'   => 'Email không đúng định dạng.',
+            'so_dien_thoai.max' => 'Số điện thoại không được quá 20 ký tự.',
+        ]);
     }
 }

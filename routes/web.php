@@ -1,7 +1,8 @@
 <?php
 
+use App\Http\Controllers\KhachHangController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    return view('welcome');
-});
+Route::redirect('/', '/khach-hang');
+
+Route::resource('khach-hang', KhachHangController::class);
